@@ -1,6 +1,6 @@
-# ⚡ AI Smart Grid Stabilizer
+# ⚡ AI based Smart Grid Stabilization and Autonomous Control System
 
-An **AI-powered smart grid simulation system** that predicts renewable energy generation (solar & wind), analyzes electricity demand, and automatically decides grid actions such as battery usage, EV charging policy, and dynamic energy pricing.
+An **AI-based Smart Grid Stabilizing and autonomous control system** that predicts renewable energy generation (solar & wind), analyzes electricity demand, and automatically decides grid actions such as battery usage, EV charging policy, and dynamic energy pricing.
 
 The system combines **machine learning models (XGBoost)** with a **real-time interactive dashboard** to demonstrate how modern smart grids can balance supply and demand.
 
@@ -294,7 +294,7 @@ price_multiplier
 
 # 🎯 Purpose of the Project
 
-This project demonstrates how **AI can autonomously stabilize renewable energy grids** by:
+This project demonstrates how **AI can autonomously recommends action based on the prediction** by:
 
 * predicting renewable generation
 * forecasting energy demand

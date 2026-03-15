@@ -305,13 +305,3 @@ Such systems are essential for **future smart grids powered by renewable energy*
 
 ---
 
-# 👤 Author
-
-**Ajay Hariharan**
-
-GitHub
-https://github.com/Ajayhariharan
-
----
-
-⭐ If you found this project interesting, please consider giving it a star.

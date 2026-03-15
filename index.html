@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AI Smart Grid Stabilizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;800&family=Space+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ════════════════════════════════════════════════════════
+   LIGHT THEME VARIABLES
+════════════════════════════════════════════════════════ */
+:root{
+  --bg:    #f0f4f8;
+  --bg2:   #e4ecf4;
+  --card:  #ffffff;
+  --card2: #f7fafd;
+  --c:     #0077cc;    /* cyan/blue   */
+  --g:     #00a854;    /* green       */
+  --y:     #c89000;    /* amber/gold  */
+  --o:     #d95020;    /* orange      */
+  --r:     #cc1840;    /* red         */
+  --p:     #7c2fcc;    /* purple      */
+  --t1:    #0f1e2e;    /* primary text */
+  --t2:    #4a6680;    /* secondary   */
+  --t3:    #8aaccc;    /* muted       */
+  --bd:    rgba(0,119,204,0.15);
+  --bdg:   rgba(0,119,204,0.40);
+  --sh:    0 2px 12px rgba(0,50,100,0.10);
+  --sh2:   0 4px 24px rgba(0,50,100,0.15);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;
+  font-family:'Inter',sans-serif;background:var(--bg);color:var(--t1)}
+
+/* ════════════════════════════════════════════════════════
+   LIGHT BG DECORATION
+════════════════════════════════════════════════════════ */
+#bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.gl{position:absolute;inset:0;
+  background-image:
+    linear-gradient(rgba(0,119,204,0.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(0,119,204,0.05) 1px,transparent 1px);
+  background-size:48px 48px;animation:gs 28s linear infinite}
+@keyframes gs{to{background-position:0 48px,48px 0}}
+.orb{position:absolute;border-radius:50%;filter:blur(80px);opacity:.18;animation:op 16s ease-in-out infinite}
+.o1{width:480px;height:480px;background:radial-gradient(circle,#b3d9ff,transparent);top:-160px;left:-80px}
+.o2{width:420px;height:420px;background:radial-gradient(circle,#b3ffe0,transparent);bottom:-100px;right:-80px;animation-delay:6s}
+.o3{width:340px;height:340px;background:radial-gradient(circle,#ffe9b3,transparent);top:35%;left:42%;animation-delay:11s}
+@keyframes op{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-22px) scale(1.04)}}
+
+/* ════════════════════════════════════════════════════════
+   APP SHELL
+════════════════════════════════════════════════════════ */
+#app{position:relative;z-index:1;display:grid;
+  grid-template-rows:60px 1fr;height:100vh;overflow:hidden}
+
+/* ════════════════════════════════════════════════════════
+   HEADER
+════════════════════════════════════════════════════════ */
+header{display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;border-bottom:2px solid var(--bd);
+  background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);
+  flex-shrink:0;box-shadow:var(--sh)}
+.logo{display:flex;align-items:center;gap:10px}
+.bolt{font-size:1.5rem;animation:bp 2s ease-in-out infinite}
+@keyframes bp{0%,100%{color:var(--y)}50%{color:#ffaa00;filter:drop-shadow(0 0 8px #ffaa00)}}
+.lt{font-family:'Orbitron',monospace;font-size:.96rem;font-weight:800;
+  color:var(--c);letter-spacing:.04em}
+.ls{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--t2);
+  letter-spacing:.14em;text-transform:uppercase;margin-top:2px}
+.hr{display:flex;align-items:center;gap:9px}
+.mbadge{font-family:'Space Mono',monospace;font-size:.56rem;padding:4px 10px;
+  border-radius:6px;background:rgba(124,47,204,.08);border:1px solid rgba(124,47,204,.25);
+  color:var(--p);letter-spacing:.05em}
+.lbadge{display:flex;align-items:center;gap:6px;background:rgba(0,168,84,.08);
+  border:1px solid rgba(0,168,84,.28);border-radius:30px;padding:4px 12px;
+  font-family:'Space Mono',monospace;font-size:.56rem;color:var(--g)}
+.ldot{width:6px;height:6px;background:var(--g);border-radius:50%;
+  box-shadow:0 0 6px var(--g);animation:lp 1.4s ease-in-out infinite}
+@keyframes lp{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.7);opacity:.4}}
+.clk{font-family:'Orbitron',monospace;font-size:.84rem;font-weight:700;
+  color:var(--c);background:rgba(0,119,204,.07);border:1px solid var(--bd);
+  border-radius:6px;padding:4px 12px;letter-spacing:.1em}
+/* Next pattern badge */
+.npbadge{font-family:'Space Mono',monospace;font-size:.52rem;padding:4px 10px;
+  border-radius:6px;background:rgba(0,119,204,.07);border:1px solid var(--bd);
+  color:var(--t2);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* Live badge — red */
+.livebadge{font-family:'Space Mono',monospace;font-size:.62rem;font-weight:700;
+  padding:5px 14px;border-radius:30px;letter-spacing:.08em;
+  background:rgba(204,24,64,.10);border:1px solid rgba(204,24,64,.35);
+  color:var(--r);animation:livePulse 1.6s ease-in-out infinite}
+@keyframes livePulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(204,24,64,.25)}50%{opacity:.8;box-shadow:0 0 0 4px rgba(204,24,64,.0)}}
+
+.pat-icon{font-size:1.4rem}
+.sbtn{font-family:'Orbitron',monospace;font-size:.66rem;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;padding:8px 20px;border-radius:8px;
+  cursor:pointer;border:2px solid var(--c);color:var(--card);border-radius: 30px;
+  background:var(--c);box-shadow:var(--sh);transition:all .18s}
+.sbtn:hover{background:#005fa3;border-color:#005fa3;box-shadow:var(--sh2);transform:translateY(-1px)}
+.sbtn:active{transform:translateY(0)}
+.sbtn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.sbtn.run{animation:sba .5s ease-in-out infinite alternate}
+@keyframes sba{from{box-shadow:0 0 8px rgba(0,119,204,.4)}to{box-shadow:0 0 22px rgba(0,119,204,.8)}}
+
+/* ════════════════════════════════════════════════════════
+   MAIN SCROLL
+════════════════════════════════════════════════════════ */
+#main{overflow-y:auto;overflow-x:hidden;padding:14px 18px 28px;
+  display:flex;flex-direction:column;gap:12px}
+#main::-webkit-scrollbar{width:5px}
+#main::-webkit-scrollbar-thumb{background:var(--bdg);border-radius:3px}
+
+/* ════════════════════════════════════════════════════════
+   PATTERN BANNER
+════════════════════════════════════════════════════════ */
+.pat-banner{border-radius:10px;padding:10px 16px;border-left:4px solid var(--c);
+  background:rgba(0,119,204,.06);border:1px solid var(--bd);
+  display:flex;align-items:center;gap:12px}
+.pat-banner > div{flex:1}
+.pat-title{font-family:'Orbitron',monospace;font-size:.72rem;font-weight:700;color:var(--c);letter-spacing:.04em}
+.pat-sub{font-family:'Orbitron',monospace;font-size:.68rem;font-weight:800;
+  color:var(--r);margin-top:6px;text-align:center;letter-spacing:.06em;
+  text-transform:uppercase;width:100%}
+
+/* ════════════════════════════════════════════════════════
+   SCENARIO TIMELINE
+════════════════════════════════════════════════════════ */
+.stl{display:flex;gap:3px;height:26px;border-radius:8px;overflow:hidden;
+  border:1px solid var(--bd);background:var(--bg2)}
+.sc{flex:1;display:flex;align-items:center;justify-content:center;
+  font-family:'Space Mono',monospace;font-size:.40rem;font-weight:700;
+  cursor:pointer;transition:opacity .2s,outline .15s;opacity:.55;letter-spacing:.02em}
+.sc:hover{opacity:1}
+.sc.act{opacity:1;outline:2px solid var(--c);outline-offset:-2px;z-index:1}
+
+/* Active scenario banner */
+.scen-banner{font-family:'Space Mono',monospace;font-size:.62rem;padding:7px 14px;
+  border-radius:8px;border:1px solid var(--bd);text-align:center;
+  background:var(--card);box-shadow:var(--sh);transition:all .4s;font-weight:700}
+
+/* Section label */
+.sec{font-family:'Orbitron',monospace;font-size:.54rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--t3);display:flex;align-items:center;gap:10px}
+.sec::after{content:'';flex:1;height:1px;background:var(--bd)}
+
+/* ════════════════════════════════════════════════════════
+   KPI STRIP — 6 cards
+════════════════════════════════════════════════════════ */
+.krow{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.kpi{background:var(--card);border:1px solid var(--bd);border-radius:11px;
+  padding:13px 15px;position:relative;overflow:hidden;
+  box-shadow:var(--sh);transition:box-shadow .2s,transform .2s}
+.kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--acc);border-radius:3px 3px 0 0}
+.kpi:hover{box-shadow:var(--sh2);transform:translateY(-2px)}
+.kl{font-family:'Space Mono',monospace;font-size:.55rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t2);margin-bottom:5px}
+.kv{font-family:'Orbitron',monospace;font-size:1.28rem;font-weight:800;
+  display:flex;align-items:baseline;gap:3px;line-height:1}
+.ku{font-size:.65rem;font-weight:400;color:var(--t2)}
+.kf{font-size:.53rem;color:var(--t3);margin-top:4px;font-family:'Space Mono',monospace}
+/* Battery mini bar */
+.kb-bar{width:100%;height:4px;background:var(--bg2);border-radius:2px;margin-top:5px;overflow:hidden}
+.kb-fill{height:100%;border-radius:2px;transition:width .9s ease}
+@keyframes kfl{0%{background:rgba(0,119,204,.12)}100%{background:transparent}}
+.kpi.flash{animation:kfl .3s ease}
+
+/* ════════════════════════════════════════════════════════
+   GRID LAYOUTS
+════════════════════════════════════════════════════════ */
+.r2 {display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.r3 {display:grid;grid-template-columns:.46fr 1fr .96fr;gap:12px}
+.r2b{display:grid;grid-template-columns:.55fr 1.45fr;gap:12px}
+
+/* ════════════════════════════════════════════════════════
+   PANEL
+════════════════════════════════════════════════════════ */
+.pnl{background:var(--card);border:1px solid var(--bd);border-radius:11px;
+  padding:13px 15px;box-shadow:var(--sh);transition:box-shadow .2s}
+.pnl:hover{box-shadow:var(--sh2)}
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px}
+.ptt{font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--t2);font-weight:700}
+.pbg{font-family:'Space Mono',monospace;font-size:.54rem;padding:2px 8px;
+  border-radius:20px;border:1px solid;letter-spacing:.04em}
+
+/* ════════════════════════════════════════════════════════
+   CHART BOX — FIXED HEIGHT (canvas absolute, no growth)
+════════════════════════════════════════════════════════ */
+.cb{position:relative;width:100%}
+.cb canvas{position:absolute!important;top:0;left:0;width:100%!important;height:100%!important}
+
+/* ════════════════════════════════════════════════════════
+   BATTERY VISUAL
+════════════════════════════════════════════════════════ */
+.bw{display:flex;flex-direction:column;align-items:center;gap:7px;padding:4px 0}
+.btrm{width:26px;height:7px;border-radius:3px 3px 0 0;margin:0 auto -1px;transition:background .5s}
+.bbod{width:64px;height:114px;border:2px solid var(--c);border-radius:7px;
+  overflow:hidden;position:relative;background:var(--bg2);transition:border-color .5s}
+.bfil{position:absolute;bottom:0;left:0;right:0;transition:height .9s ease,background .5s}
+.bpct{font-family:'Orbitron',monospace;font-size:1.45rem;font-weight:800;transition:color .5s}
+.bkwh{font-family:'Space Mono',monospace;font-size:.58rem;color:var(--t2);text-align:center}
+.bact{font-family:'Space Mono',monospace;font-size:.57rem;text-align:center;margin-top:2px;font-weight:700}
+
+/* ════════════════════════════════════════════════════════
+   IMBALANCE BARS
+════════════════════════════════════════════════════════ */
+.ir{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.il{font-family:'Space Mono',monospace;font-size:.55rem;color:var(--t2);width:46px;text-align:right}
+.io{flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden}
+.ifl{height:100%;border-radius:3px;transition:width .85s ease;background:var(--cc)}
+.iv{font-family:'Orbitron',monospace;font-size:.62rem;font-weight:700;width:72px;text-align:right}
+
+/* ════════════════════════════════════════════════════════
+   SUPPLY vs DEMAND BARS
+════════════════════════════════════════════════════════ */
+.svw{display:flex;gap:14px;justify-content:center;height:118px;padding:0 8px;margin-top:9px}
+.svc{display:flex;flex-direction:column;align-items:center;gap:4px;flex:1}
+.svo{width:100%;flex:1;background:var(--bg2);border-radius:5px;overflow:hidden;display:flex;align-items:flex-end}
+.svf{width:100%;border-radius:5px 5px 0 0;transition:height .85s cubic-bezier(.25,1,.5,1)}
+.svl{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--t2);text-transform:uppercase}
+.svv{font-family:'Orbitron',monospace;font-size:.7rem;font-weight:700}
+
+/* ════════════════════════════════════════════════════════
+   EV POLICY BOX
+════════════════════════════════════════════════════════ */
+.evb{display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:9px;
+  border:1px solid var(--g);background:rgba(0,168,84,.06);transition:all .4s}
+.ei{font-size:1.3rem}
+.elb{font-family:'Orbitron',monospace;font-size:.67rem;font-weight:700;letter-spacing:.04em}
+.esb{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--t2);margin-top:2px}
+.ev-cond{font-family:'Space Mono',monospace;font-size:.57rem;padding:7px 10px;
+  border-radius:7px;border-left:3px solid;margin-top:8px;line-height:1.6;color:var(--t1)}
+
+/* Grid action banner */
+.gb{display:flex;align-items:center;gap:9px;padding:9px 13px;border-radius:9px;
+  border:1px solid;margin-top:8px;transition:all .4s}
+.gb-ic{font-size:1.1rem}
+.gb-tt{font-family:'Orbitron',monospace;font-size:.67rem;font-weight:700}
+.gb-ds{font-family:'Space Mono',monospace;font-size:.54rem;color:var(--t2);margin-top:2px}
+
+/* ════════════════════════════════════════════════════════
+   PRICE DONUT
+════════════════════════════════════════════════════════ */
+.pw{display:flex;flex-direction:column;align-items:center;margin-top:10px}
+.pcw{position:relative;width:128px;height:128px}
+.pcw canvas{position:absolute;inset:0}
+.pcc{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.pvl{font-family:'Orbitron',monospace;font-size:1.26rem;font-weight:800;transition:color .4s}
+.psl{font-family:'Space Mono',monospace;font-size:.52rem;color:var(--t3);letter-spacing:.1em}
+
+/* ════════════════════════════════════════════════════════
+   PATTERN ALERTS
+════════════════════════════════════════════════════════ */
+.alerts-wrap{display:flex;flex-direction:column;gap:8px}
+.al{display:flex;align-items:flex-start;gap:10px;padding:10px 13px;border-radius:9px;
+  border-left:3px solid;font-family:'Space Mono',monospace;font-size:.6rem;line-height:1.6}
+.al-ic{font-size:1.1rem;flex-shrink:0;margin-top:1px}
+.al-title{font-family:'Orbitron',monospace;font-size:.62rem;font-weight:700;margin-bottom:3px}
+.al-msg{font-size:.58rem;color:var(--t2)}
+.al.success{border-left-color:var(--g);background:rgba(0,168,84,.06)}
+.al.warning{border-left-color:var(--y);background:rgba(200,144,0,.07)}
+.al.critical{border-left-color:var(--r);background:rgba(204,24,64,.07)}
+.al.info{border-left-color:var(--c);background:rgba(0,119,204,.06)}
+
+/* ════════════════════════════════════════════════════════
+   TABLE
+════════════════════════════════════════════════════════ */
+.tw{overflow-y:auto;max-height:220px;border-radius:6px;border:1px solid var(--bd)}
+.tw::-webkit-scrollbar{width:4px}
+.tw::-webkit-scrollbar-thumb{background:var(--bdg);border-radius:2px}
+table{width:100%;border-collapse:collapse}
+th{font-family:'Space Mono',monospace;font-size:.5rem;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--t2);padding:6px 8px;text-align:left;
+  border-bottom:2px solid var(--bd);position:sticky;top:0;background:var(--card2);z-index:2}
+td{padding:5px 8px;border-bottom:1px solid var(--bg2);font-family:'Space Mono',monospace;font-size:.58rem;color:var(--t2)}
+tr:hover td{background:rgba(0,119,204,.04)}
+tr.cur td{background:rgba(0,119,204,.08);color:var(--t1);font-weight:600}
+.ab{display:inline-flex;padding:1px 7px;border-radius:20px;font-size:.5rem;font-weight:700;border:1px solid}
+
+/* ════════════════════════════════════════════════════════
+   INPUT GRID
+════════════════════════════════════════════════════════ */
+.igrid{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.ich{background:var(--card2);border:1px solid var(--bd);border-radius:7px;padding:7px 9px;transition:border-color .4s}
+.icl{font-family:'Space Mono',monospace;font-size:.51rem;color:var(--t3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px}
+.icv{font-family:'Orbitron',monospace;font-size:.78rem;font-weight:700;color:var(--c)}
+.ich.sc-big {border-color:rgba(0,119,204,.3);background:rgba(0,119,204,.06)}
+.ich.sc-sml {border-color:rgba(200,144,0,.3);background:rgba(200,144,0,.06)}
+.ich.sc-bal {border-color:rgba(0,168,84,.3); background:rgba(0,168,84,.06)}
+.ich.sc-mod {border-color:rgba(217,80,32,.3);background:rgba(217,80,32,.06)}
+.ich.sc-sev {border-color:rgba(204,24,64,.3);background:rgba(204,24,64,.06)}
+
+/* ════════════════════════════════════════════════════════
+   FADE-IN
+════════════════════════════════════════════════════════ */
+.fi{opacity:0;transform:translateY(12px);animation:fad .42s ease forwards}
+@keyframes fad{to{opacity:1;transform:translateY(0)}}
+
+/* ════════════════════════════════════════════════════════
+   ERROR TOAST
+════════════════════════════════════════════════════════ */
+#toast{display:none;position:fixed;bottom:20px;right:20px;z-index:10000;
+  background:rgba(204,24,64,.12);border:1px solid var(--r);color:var(--r);
+  padding:12px 16px;border-radius:10px;font-family:'Space Mono',monospace;
+  font-size:.68rem;max-width:360px;line-height:1.5;white-space:pre-wrap;box-shadow:var(--sh2)}
+</style>
+</head>
+<body>
+<div id="bg"><div class="gl"></div><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+
+<div id="app">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <span class="bolt">⚡</span>
+      <div><div class="lt">AI Smart Grid Stabilizer</div>
+        <div class="ls">Predictive · Proactive · Self-Healing · XGBoost Engine</div></div>
+    </div>
+    <div class="hr">
+      <div class="mbadge" id="mbadge" style="display:none"></div>
+      <div class="livebadge" id="liveBadge">● LIVE</div>
+      <button class="sbtn" id="sbtn" onclick="runSim()">▶ Run Simulation</button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <div id="main">
+
+
+    <!-- SCENARIO TIMELINE -->
+    <div class="stl fi" id="stl" style="animation-delay:.05s"></div>
+
+    <!-- KPIs -->
+    <div class="sec fi" style="animation-delay:.08s">Live Metrics</div>
+    <div class="krow fi" style="animation-delay:.09s">
+      <div class="kpi" style="--acc:var(--o)">
+        <div class="kl">⬇ Demand</div>
+        <div class="kv"><span id="kd" style="color:var(--o)">---</span><span class="ku">kW</span></div>
+        <div class="kf">real-time load</div>
+      </div>
+      <div class="kpi" style="--acc:var(--c)">
+        <div class="kl">⬆ Supply</div>
+        <div class="kv"><span id="ks" style="color:var(--c)">---</span><span class="ku">kW</span></div>
+        <div class="kf">solar + wind</div>
+      </div>
+      <div class="kpi" style="--acc:var(--y)">
+        <div class="kl">☀ Solar</div>
+        <div class="kv"><span id="ksol" style="color:var(--y)">---</span><span class="ku">kW</span></div>
+        <div class="kf" id="ksolFoot">XGBoost predicted</div>
+      </div>
+      <div class="kpi" style="--acc:var(--g)">
+        <div class="kl">💨 Wind</div>
+        <div class="kv"><span id="kw" style="color:var(--g)">---</span><span class="ku">kW</span></div>
+        <div class="kf" id="kwFoot">XGBoost predicted</div>
+      </div>
+      <div class="kpi" style="--acc:var(--p)">
+        <div class="kl">⚡ Grid Status</div>
+        <div class="kv" style="font-size:.75rem;line-height:1.2"><span id="kst" style="color:var(--g)">Standby</span></div>
+        <div class="kf" id="kimb">awaiting simulation</div>
+      </div>
+      <div class="kpi" id="kBattCard" style="--acc:var(--c)">
+        <div class="kl">🔋 Battery Level</div>
+        <div class="kv"><span id="kbatt" style="color:var(--c)">100</span><span class="ku">%</span></div>
+        <div class="kb-bar"><div class="kb-fill" id="kBattBar" style="width:100%;background:var(--c)"></div></div>
+        <div class="kf" id="kbattKwh">2000 / 2000 kWh</div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="sec fi" style="animation-delay:.12s">Energy Flow — 24H</div>
+    <div class="r2 fi" style="animation-delay:.13s">
+      <div class="pnl">
+        <div class="ph"><span class="ptt">📈 Supply vs Demand</span>
+          <span class="pbg" style="color:var(--c);border-color:var(--c)">24H</span></div>
+        <div class="cb" style="height:186px"><canvas id="sdChart"></canvas></div>
+      </div>
+      <div class="pnl">
+        <div class="ph"><span class="ptt">🌞💨 Renewable Generation</span>
+          <span class="pbg" style="color:var(--y);border-color:var(--y)">24H</span></div>
+        <div class="cb" style="height:186px"><canvas id="renChart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- INTELLIGENCE LAYER -->
+    <div class="sec fi" style="animation-delay:.16s">Grid Intelligence Layer</div>
+    <div class="r3 fi" style="animation-delay:.17s">
+
+      <!-- Battery -->
+      <div class="pnl">
+        <div class="ph"><span class="ptt">🔋 Battery Storage</span></div>
+        <div class="bw">
+          <div class="btrm" id="btrm" style="background:var(--c)"></div>
+          <div class="bbod" id="bbod"><div class="bfil" id="bfil" style="height:100%;background:linear-gradient(180deg,var(--c),#003366)"></div></div>
+          <div class="bpct" id="bpct" style="color:var(--c)">100%</div>
+          <div class="bkwh" id="bkwh">2000 / 2000 kWh</div>
+          <div class="bact" id="bact">—</div>
+        </div>
+      </div>
+
+      <!-- Power Balance -->
+      <div class="pnl">
+        <div class="ph"><span class="ptt">⚖ Power Balance</span></div>
+        <div class="ir"><div class="il">Solar</div>
+          <div class="io"><div class="ifl" id="ibs" style="width:0%;--cc:var(--y)"></div></div>
+          <div class="iv" id="ivs" style="color:var(--y)">0 kW</div></div>
+        <div class="ir"><div class="il">Wind</div>
+          <div class="io"><div class="ifl" id="ibw" style="width:0%;--cc:var(--g)"></div></div>
+          <div class="iv" id="ivw" style="color:var(--g)">0 kW</div></div>
+        <div class="ir"><div class="il">Supply</div>
+          <div class="io"><div class="ifl" id="ibsp" style="width:0%;--cc:var(--c)"></div></div>
+          <div class="iv" id="ivsp" style="color:var(--c)">0 kW</div></div>
+        <div class="ir"><div class="il">Demand</div>
+          <div class="io"><div class="ifl" id="ibd" style="width:0%;--cc:var(--o)"></div></div>
+          <div class="iv" id="ivd" style="color:var(--o)">0 kW</div></div>
+        <div class="svw">
+          <div class="svc">
+            <div class="svo"><div class="svf" id="svd"
+              style="height:50%;background:linear-gradient(180deg,#d95020,#7a2000)"></div></div>
+            <div class="svv" id="svdv" style="color:var(--o)">---</div>
+            <div class="svl">Demand</div>
+          </div>
+          <div class="svc">
+            <div class="svo"><div class="svf" id="svs"
+              style="height:50%;background:linear-gradient(180deg,#0077cc,#003366)"></div></div>
+            <div class="svv" id="svsv" style="color:var(--c)">---</div>
+            <div class="svl">Supply</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- EV + Grid Action + Price -->
+      <div class="pnl">
+        <div class="ph"><span class="ptt">🚗 EV Policy & Grid Action</span></div>
+        <div class="evb" id="evb">
+          <div class="ei" id="evi">🚗</div>
+          <div><div class="elb" id="elb" style="color:var(--t2)">Standby</div>
+            <div class="esb" id="esb">Run simulation first</div></div>
+        </div>
+        <div class="ev-cond" id="evCond"
+             style="border-left-color:var(--bd);background:var(--card2);color:var(--t2)">
+          EV charging policy based on grid imbalance
+        </div>
+        <div class="gb" id="gridBanner" style="border-color:var(--bd);background:var(--card2)">
+          <div class="gb-ic">⚡</div>
+          <div><div class="gb-tt" id="gbTitle" style="color:var(--t2)">—</div>
+            <div class="gb-ds" id="gbDesc">Grid decision engine standby</div></div>
+        </div>
+        <div style="margin-top:10px">
+          <div class="ptt" style="margin-bottom:5px">💰 Price Multiplier</div>
+          <div class="pw">
+            <div class="pcw">
+              <canvas id="pdChart" width="128" height="128"></canvas>
+              <div class="pcc">
+                <div class="pvl" id="pvl" style="color:var(--t2)">—</div>
+                <div class="psl">multiplier</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PATTERN ALERTS + TABLE -->
+    <div class="sec fi" style="animation-delay:.21s">Pattern Alerts & Decision Log</div>
+    <div class="r2b fi" style="animation-delay:.22s">
+
+      <!-- Alerts panel -->
+      <div class="pnl" style="overflow-y:auto;max-height:320px">
+        <div class="ph">
+          <span class="ptt">⚠ Pattern Alerts & Recommendations</span>
+        </div>
+        <div class="alerts-wrap" id="alertsWrap">
+          <div class="al info">
+            <div class="al-ic">📊</div>
+            <div><div class="al-title">Ready</div>
+              <div class="al-msg">Click ▶ Run Simulation to see pattern-specific alerts and recommendations.</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="pnl">
+        <div class="ph">
+          <span class="ptt">📋 24H Simulation Log</span>
+          <span class="pbg" id="thr" style="color:var(--g);border-color:var(--g)">—</span>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr>
+              <th>Hr</th><th>Scenario</th><th>Solar</th><th>Wind</th>
+              <th>Supply</th><th>Demand</th><th>Imbal.</th>
+              <th>Batt%</th><th>Action</th><th>EV</th><th>Price</th>
+            </tr></thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAW INPUTS -->
+    <div class="sec fi" style="animation-delay:.26s">Model Input Features — Selected Hour</div>
+    <div class="pnl fi" style="animation-delay:.27s">
+      <div class="ph">
+        <span class="ptt">🔬 Raw Inputs fed to XGBoost</span>
+        <span class="pbg" id="inputHr" style="color:var(--p);border-color:var(--p)">—</span>
+      </div>
+      <div class="igrid">
+        <div class="ich"><div class="icl">GHI (W/m²)</div>      <div class="icv" id="ig-ghi">—</div></div>
+        <div class="ich"><div class="icl">Temperature (°C)</div> <div class="icv" id="ig-tmp">—</div></div>
+        <div class="ich"><div class="icl">Cloud Cover (%)</div>  <div class="icv" id="ig-cld">—</div></div>
+        <div class="ich"><div class="icl">Clearness Index</div>  <div class="icv" id="ig-ci">—</div></div>
+        <div class="ich"><div class="icl">Panel Efficiency</div> <div class="icv" id="ig-peff">—</div></div>
+        <div class="ich"><div class="icl">Solar Elevation</div>  <div class="icv" id="ig-elev">—</div></div>
+        <div class="ich"><div class="icl">Wind Speed (m/s)</div> <div class="icv" id="ig-ws">—</div></div>
+        <div class="ich"><div class="icl">Wind Direction</div>   <div class="icv" id="ig-wd">—</div></div>
+        <div class="ich"><div class="icl">Wind Capacity</div>    <div class="icv" id="ig-wc">—</div></div>
+        <div class="ich"><div class="icl">Air Density</div>      <div class="icv" id="ig-ad">1.225</div></div>
+        <div class="ich"><div class="icl">Is Daytime</div>       <div class="icv" id="ig-day">—</div></div>
+        <div class="ich"><div class="icl">Solar Power Lag1</div> <div class="icv" id="ig-spl">—</div></div>
+        <div class="ich"><div class="icl">Wind Power Lag1</div>  <div class="icv" id="ig-wpl">—</div></div>
+        <div class="ich"><div class="icl">Battery (kWh)</div>    <div class="icv" id="ig-bat">—</div></div>
+        <div class="ich"><div class="icl">Model Used</div>       <div class="icv" id="ig-mod" style="font-size:.58rem">—</div></div>
+        <div class="ich"><div class="icl">Scenario</div>         <div class="icv" id="ig-scn" style="font-size:.56rem">—</div></div>
+      </div>
+    </div>
+
+    <!-- IMBALANCE CHART -->
+    <div class="sec fi" style="animation-delay:.3s">Imbalance Timeline — Full 24H</div>
+    <div class="pnl fi" style="animation-delay:.31s">
+      <div class="ph">
+        <span class="ptt">📊 Power Imbalance (kW)</span>
+        <span class="pbg" style="color:var(--p);border-color:var(--p)">All Hours</span>
+      </div>
+      <div class="cb" style="height:144px"><canvas id="imbChart"></canvas></div>
+    </div>
+
+    <div style="height:8px"></div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+'use strict';
+const API  = 'http://localhost:5000';
+const BMAX = 2000;
+let DATA = null, CUR = 0, ALERTS = [], PAT_IDX = -1;
+let sdC=null, renC=null, imbC=null, pdC=null;
+
+const P={c:'#0077cc',g:'#00a854',y:'#c89000',o:'#d95020',r:'#cc1840',p:'#7c2fcc'};
+
+/* Scenario styles */
+const SS={
+  big_surplus:         {c:P.c,bg:'rgba(0,119,204,.15)',   lbl:'☀ BIG SURPLUS'},
+  overload_risk:       {c:'#c04000',bg:'rgba(192,64,0,.15)',lbl:'⚡ OVERLOAD RISK'},
+  small_surplus:       {c:P.y,bg:'rgba(200,144,0,.14)',   lbl:'🌤 SMALL SURPLUS'},
+  balanced:            {c:P.g,bg:'rgba(0,168,84,.13)',    lbl:'⚖ BALANCED'},
+  moderate_deficit:    {c:P.o,bg:'rgba(217,80,32,.14)',   lbl:'🌥 MODERATE DEFICIT'},
+  severe_deficit:      {c:P.r,bg:'rgba(204,24,64,.14)',   lbl:'🌩 SEVERE DEFICIT'},
+  critical_high_demand:{c:P.r,bg:'rgba(204,24,64,.18)',   lbl:'🔥 CRITICAL DEMAND'},
+  ev_heavy:            {c:P.p,bg:'rgba(124,47,204,.13)',  lbl:'🚗 EV HEAVY LOAD'},
+  night_wind_surplus:  {c:'#006699',bg:'rgba(0,102,153,.14)',lbl:'🌬 NIGHT WIND SURPLUS'},
+};
+const SC_CLASS={
+  big_surplus:'sc-big',overload_risk:'sc-big',small_surplus:'sc-sml',
+  balanced:'sc-bal',moderate_deficit:'sc-mod',severe_deficit:'sc-sev',
+  critical_high_demand:'sc-sev',ev_heavy:'sc-mod',night_wind_surplus:'sc-big',
+};
+
+/* Action badge colours */
+const ACBG={
+  'Store Energy':              {bg:'rgba(0,119,204,.12)',bd:P.c,tx:P.c},
+  'Balanced':                  {bg:'rgba(0,168,84,.10)', bd:P.g,tx:P.g},
+  'Use Backup Battery':        {bg:'rgba(200,144,0,.12)',bd:P.y,tx:P.y},
+  'Reroute Power':             {bg:'rgba(217,80,32,.12)',bd:P.o,tx:P.o},
+  'Emergency Battery Support': {bg:'rgba(204,24,64,.12)',bd:P.r,tx:P.r},
+  'Emergency Reroute':         {bg:'rgba(204,24,64,.16)',bd:P.r,tx:P.r},
+};
+
+/* EV policy config */
+const EVC={
+  'Fast Charging Allowed':{i:'⚡',c:P.c,bg:'rgba(0,119,204,.07)',
+    sub:'Surplus supply — EVs charging at maximum rate',
+    cond:'Supply exceeds demand by >150 kW. Surplus energy is routed to EV chargers at full speed. Battery is also being charged with the remainder. Optimal time to top up fleet vehicles.'},
+  'Normal Charging':{i:'🚗',c:P.g,bg:'rgba(0,168,84,.06)',
+    sub:'Grid balanced — standard EV charging rate',
+    cond:'Supply and demand are within ±150 kW. Grid is stable. EVs charge at standard contracted rate. No adjustments needed. Monitor for demand spikes.'},
+  'Limited Charging':{i:'⚠️',c:P.y,bg:'rgba(200,144,0,.07)',
+    sub:'Moderate deficit — EV charging throttled',
+    cond:'Supply is 50–200 kW below demand. Grid is drawing from backup battery or rerouting power. EV charging reduced to 30–50% to shed load. Schedule non-urgent charging for off-peak hours (22:00–06:00).'},
+  'Charging Paused':{i:'🛑',c:P.r,bg:'rgba(204,24,64,.07)',
+    sub:'EMERGENCY — all EV charging suspended',
+    cond:'Supply is >200 kW below demand. Emergency conditions. All EV charging halted immediately. Do not restart until grid status returns to Balanced or Stable. Battery backup or emergency reroute is active.'},
+};
+
+/* Grid action descriptions */
+const GAC={
+  'Store Energy':{icon:'🔋',c:P.c,
+    desc:'Surplus >150 kW stored in battery. Prevents overload and saves energy for deficit periods.'},
+  'Balanced':{icon:'✅',c:P.g,
+    desc:'Supply matches demand within ±150 kW. Grid operating nominally. No corrective action required.'},
+  'Use Backup Battery':{icon:'⚡',c:P.y,
+    desc:'Deficit 50–200 kW. Drawing stored energy from battery to cover the shortfall.'},
+  'Reroute Power':{icon:'🔀',c:P.o,
+    desc:'Deficit 50–200 kW but battery is depleted. Rerouting power from alternate grid segments.'},
+  'Emergency Battery Support':{icon:'🚨',c:P.r,
+    desc:'Severe deficit >200 kW. Emergency battery discharge active. Immediate load shedding required.'},
+  'Emergency Reroute':{icon:'⛔',c:P.r,
+    desc:'Severe deficit and battery empty. Emergency reroute from external sources. Critical state — blackout risk.'},
+};
+
+/* Grid status label — pattern-specific */
+const STC={
+  'Balanced':                  {c:P.g, t:'Stable Grid'},
+  'Store Energy':              {c:P.c, t:'Storing Surplus'},
+  'Use Backup Battery':        {c:P.y, t:'Using Backup Power'},
+  'Reroute Power':             {c:P.o, t:'Rerouting Power'},
+  'Emergency Battery Support': {c:P.r, t:'Critical — Emergency'},
+  'Emergency Reroute':         {c:P.r, t:'Emergency Reroute'},
+};
+
+/* Pattern icons & descriptions */
+const PRED_NOTE = '📡 Predictive Data';
+const PAT_INFO=[
+  {icon:'🔋',title:'Pattern 1: Supply < Demand',sub:PRED_NOTE},
+  {icon:'⚡',title:'Pattern 2: Supply > Demand',sub:PRED_NOTE},
+  {icon:'✅',title:'Pattern 3: Supply = Demand',sub:PRED_NOTE},
+  {icon:'🔥',title:'Pattern 4: Critical Demand Spike',sub:PRED_NOTE},
+  {icon:'🚗',title:'Pattern 5: EV Peak Load',sub:PRED_NOTE},
+  {icon:'🌬',title:'Pattern 6: Night Wind Surplus',sub:PRED_NOTE},
+  {icon:'📊',title:'Pattern 7: Full Day Ramp',sub:PRED_NOTE},
+];
+
+/* ── CHART INIT ── */
+const BOPTS={
+  responsive:true,maintainAspectRatio:false,
+  plugins:{
+    legend:{labels:{color:P.c.replace('#',''),font:{family:'Space Mono',size:9},boxWidth:10,padding:9,color:'#4a6680'}},
+    tooltip:{backgroundColor:'#fff',titleColor:'#0f1e2e',bodyColor:'#4a6680',
+      borderColor:'rgba(0,119,204,.25)',borderWidth:1,cornerRadius:6,padding:7}
+  },
+  scales:{
+    x:{ticks:{color:'#8aaccc',font:{family:'Space Mono',size:8},maxRotation:0,maxTicksLimit:12},
+       grid:{color:'rgba(0,50,100,.07)'},border:{color:'rgba(0,50,100,.1)'}},
+    y:{ticks:{color:'#8aaccc',font:{family:'Space Mono',size:8},maxTicksLimit:5},
+       grid:{color:'rgba(0,50,100,.07)'},border:{color:'rgba(0,50,100,.1)'}}
+  },
+  animation:{duration:0},
+  elements:{point:{radius:2.5,hoverRadius:5,borderWidth:0},line:{tension:.4,borderWidth:2}}
+};
+
+function initCharts(){
+  sdC=new Chart(document.getElementById('sdChart'),{type:'line',data:{labels:[],
+    datasets:[
+      {label:'Supply (kW)',data:[],borderColor:P.c,backgroundColor:'rgba(0,119,204,.08)',fill:true},
+      {label:'Demand (kW)',data:[],borderColor:P.o,backgroundColor:'rgba(217,80,32,.08)',fill:true},
+    ]},options:{...BOPTS}});
+  renC=new Chart(document.getElementById('renChart'),{type:'line',data:{labels:[],
+    datasets:[
+      {label:'Solar (kW)',data:[],borderColor:P.y,backgroundColor:'rgba(200,144,0,.08)',fill:true},
+      {label:'Wind (kW)', data:[],borderColor:P.g,backgroundColor:'rgba(0,168,84,.07)',fill:true},
+    ]},options:{...BOPTS}});
+  imbC=new Chart(document.getElementById('imbChart'),{type:'bar',data:{labels:[],
+    datasets:[{label:'Imbalance (kW)',data:[],backgroundColor:[],borderColor:[],borderWidth:1,borderRadius:3}]},
+    options:{...BOPTS}});
+  pdC=new Chart(document.getElementById('pdChart'),{type:'doughnut',
+    data:{datasets:[{data:[0,2.5],backgroundColor:[P.g,'rgba(0,50,100,.08)'],
+      borderWidth:0,circumference:270,rotation:-135}]},
+    options:{responsive:false,cutout:'78%',
+      plugins:{legend:{display:false},tooltip:{enabled:false}},animation:{duration:400}}});
+}
+
+/* ── BUILD TIMELINE ── */
+function buildTimeline(){
+  const tl=document.getElementById('stl');
+  tl.innerHTML='';
+  DATA.forEach((r,i)=>{
+    const s=SS[r.scenario]||{c:'#888',bg:'rgba(0,0,0,.06)',lbl:r.scenario};
+    const cell=document.createElement('div');
+    cell.className='sc'+(i===CUR?' act':'');
+    cell.style.cssText=`background:${s.bg};color:${s.c}`;
+    cell.textContent=String(r.hour).padStart(2,'0');
+    cell.title=`Hr ${r.hour}: ${r.scenario_label||r.scenario}`;
+    cell.onclick=()=>display(i);
+    tl.appendChild(cell);
+  });
+}
+function updTimeline(h){
+  document.querySelectorAll('.sc').forEach((c,i)=>c.classList.toggle('act',i===h));
+}
+
+/* ── SIMULATE ── */
+async function runSim(){
+  const btn=document.getElementById('sbtn');
+  btn.textContent='⟳ Running…';btn.classList.add('run');btn.disabled=true;
+  try{
+    const res=await fetch(`${API}/api/simulate`);
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const j=await res.json();
+    if(!j.success) throw new Error(j.error||'Simulation failed');
+
+    DATA=j.data; ALERTS=j.alerts||[]; PAT_IDX=j.pattern_index;
+
+    // Scroll to top first so user lands on pattern banner
+    document.getElementById('main').scrollTop = 0;
+
+ 
+
+    CUR=0;
+    buildTimeline();
+    renderAlerts();
+    display(0);
+
+  }catch(e){
+    showToast(`Cannot reach Flask backend.\n\nMake sure app.py is running:\n  python app.py\n\nError: ${e.message}`);
+  }finally{
+    btn.textContent='▶ Run Simulation';btn.classList.remove('run');btn.disabled=false;
+  }
+}
+
+/* ── RENDER ALERTS (pattern-level) ── */
+function renderAlerts(){
+  if(!ALERTS||!ALERTS.length){
+    document.getElementById('alertsWrap').innerHTML=`<div class="al info"><div class="al-ic">✅</div><div><div class="al-title">No Alerts</div><div class="al-msg">Grid operating within normal parameters.</div></div></div>`;
+    return;
+  }
+  document.getElementById('alertsWrap').innerHTML=ALERTS.map(a=>`
+    <div class="al ${a.type||'info'}">
+      <div class="al-ic">${a.icon||'•'}</div>
+      <div><div class="al-title">${a.title||''}</div>
+        <div class="al-msg">${a.msg||''}</div></div>
+    </div>`).join('');
+}
+
+/* ── DISPLAY — updates every panel for hour h ── */
+function display(h){
+  if(!DATA) return;
+  CUR=h;
+  const r=DATA[h];
+
+  updTimeline(h);
+
+  // KPIs
+  document.getElementById('kd').textContent=r.demand_kw;
+  document.getElementById('ks').textContent=r.supply_kw;
+  document.getElementById('ksol').textContent=r.solar_kw;
+  document.getElementById('kw').textContent=r.wind_kw;
+  const sc=STC[r.grid_action]||{c:P.g,t:r.grid_action};
+
+  // Pattern-specific Grid Status override
+  const patLabels=[
+    {c:P.y, t:'Using Backup Power'},      // P0: supply < demand
+    {c:P.c, t:'Storing Surplus ⚡'},       // P1: supply > demand
+    {c:P.g, t:'Stable Grid'},              // P2: balanced
+    {c:P.r, t:'Critical Demand Spike 🔥'},// P3: critical
+    {c:P.p, t:'EV Heavy Load 🚗'},         // P4: EV heavy
+    {c:'#005599', t:'Night Wind Surplus 🌬'},// P5: night wind
+    {c:P.t2, t:'Full Ramp — All States'}, // P6: mixed
+  ];
+  // Use per-action label if EV/emergency overrides, else pattern label
+  let gridLabel;
+  if(r.grid_action==='Emergency Battery Support'||r.grid_action==='Emergency Reroute'){
+    gridLabel={c:P.r,t:'Critical — Emergency'};
+  } else if(r.grid_action==='Store Energy'){
+    gridLabel={c:P.c,t:'Storing Surplus ⚡'};
+  } else if(r.grid_action==='Use Backup Battery'){
+    gridLabel={c:P.y,t:'Using Backup Power'};
+  } else if(r.grid_action==='Reroute Power'){
+    gridLabel={c:P.o,t:'Rerouting Power'};
+  } else if(PAT_IDX>=0 && patLabels[PAT_IDX]){
+    gridLabel=patLabels[PAT_IDX];
+  } else {
+    gridLabel=sc;
+  }
+  const kst=document.getElementById('kst');
+  kst.textContent=gridLabel.t; kst.style.color=gridLabel.c;
+  document.getElementById('kimb').textContent=
+    r.imbalance_kw>=0?`+${r.imbalance_kw} kW surplus`:`${r.imbalance_kw} kW deficit`;
+
+  // Battery KPI
+  const bpct=r.battery_pct||Math.round((r.battery_level/BMAX)*100);
+  const bc=bpct>60?P.c:bpct>30?P.y:P.r;
+  document.getElementById('kbatt').textContent=bpct;
+  document.getElementById('kbatt').style.color=bc;
+  document.getElementById('kBattBar').style.width=bpct+'%';
+  document.getElementById('kBattBar').style.background=bc;
+  document.getElementById('kbattKwh').textContent=`${r.battery_level} / ${BMAX} kWh`;
+  document.getElementById('kBattCard').style.setProperty('--acc',bc);
+
+  document.querySelectorAll('.kpi').forEach(k=>{k.classList.remove('flash');void k.offsetWidth;k.classList.add('flash');});
+
+  // Battery visual
+  const bf=document.getElementById('bfil');
+  bf.style.height=bpct+'%';
+  bf.style.background=`linear-gradient(180deg,${bc},${bc}66)`;
+  document.getElementById('btrm').style.cssText=`width:26px;height:7px;border-radius:3px 3px 0 0;margin:0 auto -1px;background:${bc}`;
+  document.getElementById('bbod').style.borderColor=bc;
+  document.getElementById('bpct').textContent=bpct+'%';
+  document.getElementById('bpct').style.color=bc;
+  document.getElementById('bkwh').textContent=`${r.battery_level} / ${BMAX} kWh`;
+  document.getElementById('bact').textContent=r.grid_action;
+  document.getElementById('bact').style.color=sc.c;
+
+  // Imbalance bars
+  const MX=1400,pw=v=>(Math.min(100,(v/MX)*100)).toFixed(1)+'%';
+  document.getElementById('ibs').style.width=pw(r.solar_kw);
+  document.getElementById('ibw').style.width=pw(r.wind_kw);
+  document.getElementById('ibsp').style.width=pw(r.supply_kw);
+  document.getElementById('ibd').style.width=pw(r.demand_kw);
+  document.getElementById('ivs').textContent=r.solar_kw+' kW';
+  document.getElementById('ivw').textContent=r.wind_kw+' kW';
+  document.getElementById('ivsp').textContent=r.supply_kw+' kW';
+  document.getElementById('ivd').textContent=r.demand_kw+' kW';
+
+  // SV bars
+  const mb=Math.max(r.supply_kw,r.demand_kw)*1.1;
+  document.getElementById('svd').style.height=((r.demand_kw/mb)*100).toFixed(1)+'%';
+  document.getElementById('svs').style.height=((r.supply_kw/mb)*100).toFixed(1)+'%';
+  document.getElementById('svdv').textContent=r.demand_kw;
+  document.getElementById('svsv').textContent=r.supply_kw;
+
+  // EV
+  const ev=EVC[r.ev_policy]||EVC['Normal Charging'];
+  const eb=document.getElementById('evb');
+  eb.style.borderColor=ev.c;eb.style.background=ev.bg;
+  document.getElementById('evi').textContent=ev.i;
+  const el=document.getElementById('elb');
+  el.textContent=r.ev_policy;el.style.color=ev.c;
+  document.getElementById('esb').textContent=ev.sub;
+  const ec=document.getElementById('evCond');
+  ec.textContent=ev.cond;ec.style.borderLeftColor=ev.c;ec.style.background=ev.bg;
+  ec.style.color=ev.c===P.r?'#990030':ev.c===P.y?'#7a5500':ev.c===P.c?'#004488':'#005522';
+
+  // Grid action banner
+  const ga=GAC[r.grid_action]||{icon:'⚡',c:P.g,desc:r.grid_action};
+  const gbanner=document.getElementById('gridBanner');
+  gbanner.style.borderColor=ga.c;gbanner.style.background=ga.c+'14';
+  document.getElementById('gbTitle').textContent=r.grid_action;
+  document.getElementById('gbTitle').style.color=ga.c;
+  document.getElementById('gbDesc').textContent=ga.desc;
+
+  // Overload warning overlay on banner if flagged
+  if(r.overload_risk){
+    document.getElementById('gbDesc').textContent='⚡ '+ga.desc+' WARNING: Surplus is extremely high — overload risk to grid infrastructure!';
+  }
+
+  // Price donut
+  const mp=2.5,frac=Math.min(r.price_multiplier/mp,1);
+  const pc=r.price_multiplier<=1?P.g:r.price_multiplier<=1.5?P.y:P.r;
+  pdC.data.datasets[0].data=[frac*mp,(1-frac)*mp];
+  pdC.data.datasets[0].backgroundColor[0]=pc;
+  pdC.update();
+  const pv=document.getElementById('pvl');
+  pv.textContent=r.price_multiplier.toFixed(1)+'x';pv.style.color=pc;
+
+  // Raw inputs
+  document.getElementById('inputHr').textContent=`Hr ${r.hour} — ${r.scenario}`;
+  [['ig-ghi',  r.solar_ghi!=null?r.solar_ghi+' W/m²':'—'],
+   ['ig-tmp',  r.solar_temp!=null?r.solar_temp+' °C':'—'],
+   ['ig-cld',  r.cloud_cover!=null?r.cloud_cover+'%':'—'],
+   ['ig-ci',   r.clearness_index!=null?r.clearness_index:'—'],
+   ['ig-peff', r.panel_eff!=null?r.panel_eff:'—'],
+   ['ig-elev', r.solar_elevation!=null?r.solar_elevation+'°':'—'],
+   ['ig-ws',   r.wind_speed!=null?r.wind_speed+' m/s':'—'],
+   ['ig-wd',   r.wind_direction!=null?r.wind_direction+'°':'—'],
+   ['ig-wc',   r.wind_capacity!=null?r.wind_capacity:'—'],
+   ['ig-ad',   '1.225 kg/m³'],
+   ['ig-day',  r.is_daytime?'☀ Yes':'🌙 No'],
+   ['ig-spl',  r.power_lag_solar!=null?r.power_lag_solar+' kW':'—'],
+   ['ig-wpl',  r.power_lag_wind!=null?r.power_lag_wind+' kW':'—'],
+   ['ig-bat',  r.battery_level+' kWh'],
+   ['ig-mod',  r.model_used||'—'],
+   ['ig-scn',  r.scenario||'—'],
+  ].forEach(([id,val])=>{const e=document.getElementById(id);if(e)e.textContent=val;});
+
+  // Colour chips by scenario
+  const cls=SC_CLASS[r.scenario]||'';
+  document.querySelectorAll('.ich').forEach(c=>{
+    c.classList.remove('sc-big','sc-sml','sc-bal','sc-mod','sc-sev');
+    if(cls)c.classList.add(cls);
+  });
+
+  // Table
+  document.getElementById('tbody').innerHTML=DATA.map((x,i)=>{
+    const ic=x.imbalance_kw>=0?P.g:P.r;
+    const b=ACBG[x.grid_action]||ACBG['Balanced'];
+    const ss2=SS[x.scenario]||{c:P.t2};
+    const ol=x.overload_risk?'background:rgba(192,64,0,.06);':'' ;
+    return `<tr class="${i===h?'cur':''}" style="${ol}">
+      <td style="color:${P.c};font-weight:700">${String(x.hour).padStart(2,'0')}:00</td>
+      <td style="color:${ss2.c};font-size:.5rem">${x.scenario}</td>
+      <td style="color:${P.y}">${x.solar_kw}</td>
+      <td style="color:${P.g}">${x.wind_kw}</td>
+      <td style="color:${P.c}">${x.supply_kw}</td>
+      <td style="color:${P.o}">${x.demand_kw}</td>
+      <td style="color:${ic};font-weight:700">${x.imbalance_kw>0?'+':''}${x.imbalance_kw}</td>
+      <td style="color:${x.battery_pct>60?P.c:x.battery_pct>30?P.y:P.r}">${x.battery_pct}%</td>
+      <td><span class="ab" style="background:${b.bg};border-color:${b.bd};color:${b.tx}">${x.grid_action}</span></td>
+      <td style="font-size:.5rem;color:#4a6680">${x.ev_policy}</td>
+      <td style="color:${x.price_multiplier>=2?P.r:x.price_multiplier>1?P.y:P.g};font-weight:700">${x.price_multiplier}x</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('thr').textContent=`Hour ${h}`;
+
+  // Charts
+  const labels=DATA.map(x=>String(x.hour).padStart(2,'0')+':00');
+  const prR=DATA.map((_,i)=>i===h?5:2);
+  sdC.data.labels=labels;
+  sdC.data.datasets[0].data=DATA.map(x=>x.supply_kw);
+  sdC.data.datasets[1].data=DATA.map(x=>x.demand_kw);
+  sdC.data.datasets[0].pointRadius=prR;sdC.data.datasets[1].pointRadius=prR;
+  sdC.update('none');
+  renC.data.labels=labels;
+  renC.data.datasets[0].data=DATA.map(x=>x.solar_kw);
+  renC.data.datasets[1].data=DATA.map(x=>x.wind_kw);
+  renC.data.datasets[0].pointRadius=prR;renC.data.datasets[1].pointRadius=prR;
+  renC.update('none');
+  const imbs=DATA.map(x=>x.imbalance_kw);
+  imbC.data.labels=labels;imbC.data.datasets[0].data=imbs;
+  imbC.data.datasets[0].backgroundColor=imbs.map((v,i)=>
+    i===h?(v>=0?'rgba(0,168,84,.85)':'rgba(204,24,64,.85)'):(v>=0?'rgba(0,168,84,.3)':'rgba(204,24,64,.3)'));
+  imbC.data.datasets[0].borderColor=imbs.map(v=>v>=0?P.g:P.r);
+  imbC.update('none');
+}
+
+/* ── STATUS CHECK ── */
+async function checkStatus(){
+  try{
+    await fetch(`${API}/api/status`);
+    // backend is online — button is ready
+  }catch{
+    // backend offline — toast will show when simulate is clicked
+  }
+}
+
+function showToast(m){const t=document.getElementById('toast');t.textContent='⚠ '+m;t.style.display='block';setTimeout(()=>{t.style.display='none';},9000);}
+
+window.addEventListener('resize',()=>{[sdC,renC,imbC].forEach(ch=>{if(ch)ch.resize();});});
+document.getElementById('main').addEventListener('scroll',()=>{
+  const y=document.getElementById('main').scrollTop*.08;
+  document.querySelector('.o1').style.transform=`translateY(${y}px)`;
+  document.querySelector('.o2').style.transform=`translateY(${-y*.8}px)`;
+});
+
+document.addEventListener('DOMContentLoaded',()=>{initCharts();checkStatus();});
+</script>
+</body>
+</html>
